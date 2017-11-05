@@ -2,7 +2,7 @@ package chatroom
 
 import java.io.IOException
 
-import chatroom.AuthService.{AuthenticationRequest, AuthenticationServiceGrpc, AuthorizationRequest}
+import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationServiceBlockingStub
 import chatroom.ChatService._
 import chatroom.grpc.JwtCallCredential
@@ -29,13 +29,9 @@ class ChannelManager {
     */
   def initAuthService(): Unit = {
     logger.info("initializing auth service")
-    // Build a new ManagedChannel
-    val authChannel = ManagedChannelBuilder.forTarget("localhost:9091").usePlaintext(true).build
-    optAuthChannel = Some(authChannel)
+    // TODO Build a new ManagedChannel
 
-    // Get a new Blocking Stub
-    val authService = AuthenticationServiceGrpc.blockingStub(authChannel)
-    optAuthService = Some(authService)
+    // TODO Get a new Blocking Stub
   }
 
   def initChatChannel(token: String, clientOutput: String => Unit): Unit = {
@@ -67,37 +63,8 @@ class ChannelManager {
     */
   def initChatStream(clientOutput: String => Unit): Unit = {
 
-    val streamObserver = new StreamObserver[ChatMessageFromServer] {
-      override def onError(t: Throwable): Unit = {
-        logger.error("gRPC error", t)
-        shutdown()
-      }
-
-      override def onCompleted(): Unit = {
-        logger.error("server closed connection, shutting down...")
-        shutdown()
-      }
-
-      override def onNext(chatMessageFromServer: ChatMessageFromServer): Unit = {
-        try {
-          clientOutput(s"${chatMessageFromServer.getTimestamp.seconds} ${chatMessageFromServer.from}> ${chatMessageFromServer.message}")
-        }
-        catch {
-          case exc: IOException =>
-            logger.error("Error printing to console", exc)
-          case exc: Throwable => logger.error("grpc exception", exc)
-        }
-      }
-    }
-
-    for {
-      chatChannel <- optChatChannel
-      callCredentials <- optJwtCallCredentials
-    } yield {
-      val chatStreamService = ChatStreamServiceGrpc.stub(chatChannel).withCallCredentials(callCredentials)
-      val toServer = chatStreamService.chat(streamObserver)
-      optToServer = Some(toServer)
-    }
+    // TODO Implement new StreamObserver[ChatMessageFromServer]
+    // TODO and assign the server responseObserver toServer variable
   }
 
   def shutdown(): Unit = {
@@ -113,44 +80,17 @@ class ChannelManager {
     * @param password
     * @return If authenticated, return the authentication token, else, return null
     */
-  def authenticate(username: String, password: String): Option[String] = {
+  def authenticate(username: String, password: String, clientOutput: String => Unit): Option[String] = {
     logger.info("authenticating user: " + username)
     //  Call authService.authenticate(...) and retreive the token
 
-    try {
-      optAuthService.map {
-        authService =>
+    // TODO Call authService.authenticate(...) and retreive the token
+    // TODO Retrieve all the roles with authService.authorization(...) and print out all the roles
+    // TODO Return the token
+    // TODO Catch StatusRuntimeException, because there could be Unauthenticated errors.
+    // TODO If there are errors, return Option.empty[String]
 
-          val authenticationReponse = authService.authenticate(new AuthenticationRequest(username, password))
-
-          /*
-            It is also possible to set a deadline to the call
-            val authenticationReponse = authService
-                      .withDeadlineAfter(1, TimeUnit.SECONDS)
-                      .authenticate(new AuthenticationRequest(username, password))
-          */
-
-          val token = authenticationReponse.token
-
-          // Retrieve all the roles with authService.authorization(...) and print out all the roles
-          val authorizationResponse = authService.authorization(new AuthorizationRequest(token))
-          logger.info("user has these roles: " + authorizationResponse.roles)
-
-          // Return the token
-          token
-      }
-    }
-    // Catch StatusRuntimeException, because there could be Unauthenticated errors.
-    catch {
-      case e: StatusRuntimeException =>
-        if (e.getStatus.getCode == Status.Code.UNAUTHENTICATED) {
-          logger.error("user not authenticated: " + username, e)
-        } else {
-          logger.error("caught a gRPC exception", e)
-        }
-        // If there are errors, return None
-        Option.empty[String]
-    }
+    ???
   }
 
   /**
@@ -230,13 +170,6 @@ class ChannelManager {
     */
   def sendMessage(room: String, message: String): Unit = {
     logger.info("sending chat message")
-    // call toServer.onNext(...)
-    optToServer match {
-      case Some(toServer) =>
-        val chatMessage = ChatMessage(MessageType.TEXT, room, message)
-        toServer.onNext(chatMessage)
-      case None =>
-        logger.info("Not Connected")
-    }
+    // TODO call toServer.onNext(...)
   }
 }

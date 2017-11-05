@@ -70,7 +70,7 @@ object ChatClient {
       else if (command.equalsIgnoreCase("/login")) {
         logger.info("processing login user")
         val password = console.readLine("password> ", '*')
-        val optToken = channelManager.authenticate(username, password)
+        val optToken = channelManager.authenticate(username, password, outputToConsole)
         optToken.foreach {
           token =>
             this.state = CurrentState(AUTHENTICATED, username, token, null)

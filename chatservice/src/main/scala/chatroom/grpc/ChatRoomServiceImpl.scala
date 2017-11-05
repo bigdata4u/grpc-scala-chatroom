@@ -1,6 +1,6 @@
 package chatroom.grpc
 
-import chatroom.AuthService.{AuthenticationServiceGrpc, AuthorizationRequest}
+import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.ChatService.{ChatRoomServiceGrpc, Empty, Room}
 import chatroom.repository.ChatRoomRepository
 import io.grpc.{Status, StatusRuntimeException}
@@ -20,22 +20,10 @@ class ChatRoomServiceImpl(val repository: ChatRoomRepository,
   protected def processIfAdmin(room: Room, process: Room => Room) = {
     // TODO Retrieve JWT from Constant.JWT_CTX_KEY
     // TODO Retrieve the roles
-    // TODO If not in the admin role, return Status.PERMISSION_DENIED
-    val jwt = Constant.JWT_CTX_KEY.get
+    // TODO If admin role, run process function on Room and return Success(room)
+    // TODO If not in the admin role, return Failure(Status.PERMISSION_DENIED.asRuntimeException)
 
-    val authorizationFuture = authService.authorization(AuthorizationRequest(jwt.getToken))
-
-    authorizationFuture.flatMap { authz =>
-      val tryAdmin = if (authz.roles.contains("admin")) {
-          process(room)
-          Success(room)
-      }
-      else {
-        logger.error(s"permission denied processing request")
-        Failure(Status.PERMISSION_DENIED.asRuntimeException)
-      }
-      Future.fromTry(tryAdmin)
-    }
+    ???
   }
 
 

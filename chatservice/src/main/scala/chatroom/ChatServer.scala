@@ -30,16 +30,16 @@ object ChatServer {
     val chatRoomService = new ChatRoomServiceImpl(repository, authService)
     val chatStreamService = new ChatStreamServiceImpl(repository)
 
+    val chatRoomServiceDefinition = ChatRoomServiceGrpc.bindService(new ChatRoomServiceImpl(repository,authService), ExecutionContext.global)
+    val chatStreamServiceDefinition = ChatStreamServiceGrpc.bindService(new ChatStreamServiceImpl(repository), ExecutionContext.global)
+
     // TODO Add JWT Server Interceptor, then later, trace interceptor
-
-    val serviceDefinition = ChatRoomServiceGrpc.bindService(new ChatRoomServiceImpl(repository,authService), ExecutionContext.global)
-    val streamServiceDefinition = ChatStreamServiceGrpc.bindService(new ChatStreamServiceImpl(repository), ExecutionContext.global)
-
     val server = ServerBuilder.forPort(9092)
-                    .addService(ServerInterceptors.intercept(serviceDefinition, jwtServerInterceptor))
-                    .addService(ServerInterceptors.intercept(streamServiceDefinition, jwtServerInterceptor))
+                    .addService(chatRoomServiceDefinition)
+                    .addService(chatStreamServiceDefinition)
                     .asInstanceOf[ServerBuilder[_]]
-                    .build.start
+                    .build
+                    .start
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
