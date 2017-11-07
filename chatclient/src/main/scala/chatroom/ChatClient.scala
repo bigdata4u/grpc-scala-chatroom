@@ -9,13 +9,12 @@ object ChatClient extends LazyLogging {
 
   private val console = new ConsoleReader
 
-  private val channelManager = new ChannelManager
+  private val channelManager = ChannelManager()
 
   private var state = CurrentState()
 
   @throws[Exception]
   def main(args: Array[String]): Unit = {
-    channelManager.initAuthService()
     prompt()
   }
 
