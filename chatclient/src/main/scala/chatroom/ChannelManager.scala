@@ -2,6 +2,8 @@ package chatroom
 
 import java.io.IOException
 
+import brave.Tracing
+import brave.grpc.GrpcTracing
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationServiceBlockingStub
 import chatroom.AuthService.{AuthenticationRequest, AuthenticationServiceGrpc, AuthorizationRequest}
 import chatroom.ChatService._
@@ -9,6 +11,8 @@ import chatroom.grpc.{Constant, JwtCallCredential}
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc._
 import io.grpc.stub.{MetadataUtils, StreamObserver}
+import zipkin.reporter.AsyncReporter
+import zipkin.reporter.urlconnection.URLConnectionSender
 
 import scala.util.Try
 
@@ -25,9 +29,14 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
     val metadata = new Metadata()
     metadata.put(Constant.JWT_METADATA_KEY, token)
 
+    val reporter = AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v1/spans"))
+    val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("chat-channel").reporter(reporter).build)
+
     val chatChannel = ManagedChannelBuilder
       .forTarget("localhost:9092")
       .intercept(MetadataUtils.newAttachHeadersInterceptor(metadata))
+      .intercept(tracing.newClientInterceptor())
+      .asInstanceOf[ManagedChannelBuilder[_]]
       .usePlaintext(true)
       .asInstanceOf[ManagedChannelBuilder[_]]
       .build
@@ -211,7 +220,14 @@ object ChannelManager extends LazyLogging  {
     */
   def apply(): ChannelManager = {
     logger.info("initializing auth service")
-    val authChannel: ManagedChannel = ManagedChannelBuilder.forTarget("localhost:9091").usePlaintext(true).build
+    val reporter = AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v1/spans"))
+    val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("auth-channel").reporter(reporter).build)
+    val authChannel: ManagedChannel = ManagedChannelBuilder
+      .forTarget("localhost:9091")
+      .intercept(tracing.newClientInterceptor())
+      .usePlaintext(true)
+      .asInstanceOf[ManagedChannelBuilder[_]]
+      .build
     val authService: AuthenticationServiceBlockingStub = AuthenticationServiceGrpc.blockingStub(authChannel)
     ChannelManager(authChannel, authService)
   }
