@@ -1,20 +1,15 @@
 package chatroom.grpc
 
-import java.util.Date
-
-import org.slf4j.LoggerFactory
-import chatroom.ChatService.{ChatMessage, ChatMessageFromServer, ChatStreamServiceGrpc, MessageType}
+import chatroom.ChatService.{ChatMessage, ChatMessageFromServer, ChatStreamServiceGrpc}
 import chatroom.repository.ChatRoomRepository
-import com.google.protobuf.timestamp.Timestamp
-import io.grpc.{Status, StatusRuntimeException}
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc.stub.StreamObserver
+import io.grpc.{Status, StatusRuntimeException}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
-class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStreamServiceGrpc.ChatStreamService {
-
-  private val logger = LoggerFactory.getLogger(classOf[ChatStreamServiceImpl].getName)
+class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStreamServiceGrpc.ChatStreamService with LazyLogging {
 
   val roomObservers = TrieMap[String, mutable.Set[StreamObserver[ChatMessageFromServer]]]()
 

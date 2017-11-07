@@ -2,18 +2,13 @@ package chatroom
 
 import java.io.IOException
 
-import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationServiceBlockingStub
 import chatroom.ChatService._
-import chatroom.grpc.JwtCallCredential
-import io.grpc.{ManagedChannel, ManagedChannelBuilder, Status, StatusRuntimeException}
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc.stub.StreamObserver
-import org.slf4j.LoggerFactory
-import chatroom.grpc.JwtCallCredential
+import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 
-class ChannelManager {
-
-  private val logger = LoggerFactory.getLogger(classOf[ChannelManager].getName)
+class ChannelManager extends LazyLogging {
 
   // Channels
   private var optAuthService: Option[AuthenticationServiceBlockingStub] = Option.empty[AuthenticationServiceBlockingStub]

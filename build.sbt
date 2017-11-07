@@ -14,7 +14,8 @@ lazy val commonSettings = Seq(
     "org.slf4j" % "slf4j-api" % "1.7.5",
     "org.slf4j" % "slf4j-simple" % "1.7.5",
     "io.zipkin.brave" % "brave-instrumentation-grpc" % "4.4.0",
-    "io.zipkin.reporter" % "zipkin-sender-urlconnection" % "0.10.0"
+    "io.zipkin.reporter" % "zipkin-sender-urlconnection" % "0.10.0",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
   ),
   scalacOptions ++= Seq(
     "-feature",
