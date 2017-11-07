@@ -1,16 +1,9 @@
 package chatroom
 
-import java.util.concurrent.Executors
-
 import chatroom.repository.UserRepository
-import com.auth0.jwt.algorithms.Algorithm
-import io.grpc.{Context, ServerBuilder}
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.LazyLogging
 
-import scala.concurrent.ExecutionContext
-
-object AuthServer {
-  private val logger = LoggerFactory.getLogger("AuthServer")
+object AuthServer extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
     val repository = new UserRepository

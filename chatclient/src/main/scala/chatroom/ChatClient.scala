@@ -2,12 +2,10 @@ package chatroom
 
 import java.io.IOException
 
+import com.typesafe.scalalogging.LazyLogging
 import jline.console.ConsoleReader
-import org.slf4j.LoggerFactory
 
-object ChatClient {
-
-  private val logger = LoggerFactory.getLogger("ChatClient")
+object ChatClient extends LazyLogging {
 
   private val console = new ConsoleReader
 

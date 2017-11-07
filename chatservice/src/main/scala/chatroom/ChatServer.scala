@@ -5,14 +5,12 @@ import chatroom.ChatService.{ChatRoomServiceGrpc, ChatStreamServiceGrpc}
 import chatroom.grpc.{ChatRoomServiceImpl, ChatStreamServiceImpl, JwtClientInterceptor, JwtServerInterceptor}
 import chatroom.repository.ChatRoomRepository
 import com.auth0.jwt.algorithms.Algorithm
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc._
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
 
-object ChatServer {
-
-  private val logger = LoggerFactory.getLogger("ChatServer")
+object ChatServer extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
     val repository = new ChatRoomRepository
