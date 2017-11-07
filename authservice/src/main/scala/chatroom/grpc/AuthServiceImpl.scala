@@ -1,23 +1,23 @@
 package chatroom.grpc
 
-
-
+import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationService
+import chatroom.AuthService.{AuthenticationRequest, AuthenticationResponse, AuthorizationRequest, AuthorizationResponse}
 import chatroom.repository.UserRepository
-import com.auth0.jwt.JWT
-import com.auth0.jwt.JWTVerifier
+import com.auth0.jwt.{JWT, JWTVerifier}
 import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.interfaces.DecodedJWT
 import io.grpc.Status
-
-import scala.concurrent.Future
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 // TODO Extend gRPC's AuthenticationServiceGrpc.AuthenticationService
 class AuthServiceImpl(repository: UserRepository,
                       issuer: String,
-                      algorithm: Algorithm)  {
+                      algorithm: Algorithm) extends AuthenticationService {
 
+  private val logger = LoggerFactory.getLogger(classOf[AuthServiceImpl])
 
   val verifier: JWTVerifier = JWT.require(algorithm).withIssuer(issuer).build
 
@@ -25,10 +25,30 @@ class AuthServiceImpl(repository: UserRepository,
 
   def jwtFromToken(token: String): DecodedJWT = verifier.verify(token)
 
-  // TODO Override authenticate methods
-  // override def authenticate(request: AuthenticationRequest): Future[chatroom.AuthService.AuthenticationResponse]
+  override def authenticate(
+      request: AuthenticationRequest): Future[AuthenticationResponse] = {
+    val user = Future(Option(repository.findUser(request.username))) // looking for the user asynchronous
+    user.flatMap {
+      case Some(us) if us.password == request.password =>
+        val token = generateToken(request.username)
+        Future.successful(AuthenticationResponse(token))
+      case _ =>
+        Future.failed(Status.UNAUTHENTICATED.asRuntimeException)
+    }
+  }
 
-  // TODO Override authorization method
-  // override def authorization(request: AuthorizationRequest): Future[chatroom.AuthService.AuthorizationResponse]
-
+  override def authorization(request: AuthorizationRequest): Future[AuthorizationResponse] = {
+    (for {
+      jwt <- Future(jwtFromToken(request.token))
+      username = jwt.getSubject
+      userOp <- Future(Option(repository.findUser(username))) if userOp.isDefined
+      user = userOp.get
+    } yield {
+      val userRoles = user.roles.toSeq
+      logger.info(s"user:$user user.roles:${user.roles} seq roles:$userRoles")
+      AuthorizationResponse(username, userRoles)
+    }) recoverWith {
+      case _ => Future.failed(Status.UNAUTHENTICATED.asRuntimeException)
+    }
+  }
 }
