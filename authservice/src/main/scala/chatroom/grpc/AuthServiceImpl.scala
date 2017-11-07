@@ -3,16 +3,15 @@ package chatroom.grpc
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationService
 import chatroom.AuthService.{AuthenticationRequest, AuthenticationResponse, AuthorizationRequest, AuthorizationResponse}
 import chatroom.repository.UserRepository
-import com.auth0.jwt.{JWT, JWTVerifier}
 import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.interfaces.DecodedJWT
+import com.auth0.jwt.{JWT, JWTVerifier}
 import io.grpc.Status
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-// TODO Extend gRPC's AuthenticationServiceGrpc.AuthenticationService
 class AuthServiceImpl(repository: UserRepository,
                       issuer: String,
                       algorithm: Algorithm) extends AuthenticationService {

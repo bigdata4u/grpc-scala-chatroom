@@ -1,11 +1,13 @@
 package chatroom
 
-import java.util.concurrent.Executors
-
 import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.grpc.AuthServiceImpl
 import chatroom.repository.UserRepository
+import com.auth0.jwt.algorithms.Algorithm
 import com.typesafe.scalalogging.LazyLogging
+import io.grpc.ServerBuilder
+
+import scala.concurrent.ExecutionContext
 
 object AuthServer extends LazyLogging {
 
