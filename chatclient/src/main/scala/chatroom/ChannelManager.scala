@@ -29,6 +29,7 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
       .forTarget("localhost:9092")
       .intercept(MetadataUtils.newAttachHeadersInterceptor(metadata))
       .usePlaintext(true)
+      .asInstanceOf[ManagedChannelBuilder[_]]
       .build
 
     optChatChannel = Some(chatChannel)
@@ -54,8 +55,32 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
     */
   def initChatStream(jwtCallCredentials: JwtCallCredential, clientOutput: String => Unit): Unit = {
 
-    // TODO Implement new StreamObserver[ChatMessageFromServer]
-    // TODO and assign the server responseObserver toServer variable
+    val streamObserver = new StreamObserver[ChatMessageFromServer] {
+      override def onError(t: Throwable): Unit = {
+        logger.error("gRPC error", t)
+        shutdown()
+      }
+      override def onCompleted(): Unit = {
+        logger.error("server closed connection, shutting down...")
+        shutdown()
+      }
+      override def onNext(chatMessageFromServer: ChatMessageFromServer): Unit = {
+        try {
+          clientOutput(s"${chatMessageFromServer.getTimestamp.seconds} ${chatMessageFromServer.from}> ${chatMessageFromServer.message}")
+        }
+        catch {
+          case exc: IOException =>
+            logger.error("Error printing to console", exc)
+          case exc: Throwable => logger.error("grpc exception", exc)
+        }
+      }
+    }
+
+    optChatChannel.foreach { chatChannel =>
+      val chatStreamService = ChatStreamServiceGrpc.stub(chatChannel).withCallCredentials(jwtCallCredentials)
+      val toServer = chatStreamService.chat(streamObserver)
+      optToServer = Some(toServer)
+    }
   }
 
   def shutdown(): Unit = {
@@ -168,7 +193,13 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
     */
   def sendMessage(room: String, message: String): Unit = {
     logger.info("sending chat message")
-    // TODO call toServer.onNext(...)
+    optToServer match {
+      case Some(toServer) =>
+        val chatMessage = ChatMessage(MessageType.TEXT, room, message)
+        toServer.onNext(chatMessage)
+      case None =>
+        logger.info("Not Connected")
+    }
   }
 }
 
