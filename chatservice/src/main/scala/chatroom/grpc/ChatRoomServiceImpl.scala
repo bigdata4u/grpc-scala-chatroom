@@ -3,19 +3,14 @@ package chatroom.grpc
 import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.ChatService.{ChatRoomServiceGrpc, Empty, Room}
 import chatroom.repository.ChatRoomRepository
-import io.grpc.{Status, StatusRuntimeException}
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc.stub.StreamObserver
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class ChatRoomServiceImpl(val repository: ChatRoomRepository,
                           authService: AuthenticationServiceGrpc.AuthenticationServiceStub)
-  extends ChatRoomServiceGrpc.ChatRoomService {
-
-  private val logger = LoggerFactory.getLogger(classOf[ChatRoomServiceImpl].getName)
+  extends ChatRoomServiceGrpc.ChatRoomService with LazyLogging {
 
   protected def processIfAdmin(room: Room, process: Room => Room) = {
     // TODO Retrieve JWT from Constant.JWT_CTX_KEY

@@ -1,12 +1,9 @@
 package chatroom.grpc
 
-import com.auth0.jwt.interfaces.DecodedJWT
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc._
-import org.slf4j.LoggerFactory
 
-class JwtClientInterceptor extends ClientInterceptor {
-
-  val logger = LoggerFactory.getLogger(classOf[JwtClientInterceptor])
+class JwtClientInterceptor extends ClientInterceptor with LazyLogging {
 
   override def interceptCall[ReqT, RespT](methodDescriptor: MethodDescriptor[ReqT, RespT], callOptions: CallOptions, channel: Channel) = {
     new ForwardingClientCall.SimpleForwardingClientCall[ReqT, RespT](channel.newCall(methodDescriptor, callOptions)) {
