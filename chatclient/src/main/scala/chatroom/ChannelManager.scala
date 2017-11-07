@@ -2,12 +2,13 @@ package chatroom
 
 import java.io.IOException
 
-import chatroom.AuthService.{AuthenticationRequest, AuthenticationServiceGrpc, AuthorizationRequest}
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationServiceBlockingStub
+import chatroom.AuthService.{AuthenticationRequest, AuthenticationServiceGrpc, AuthorizationRequest}
 import chatroom.ChatService._
+import chatroom.grpc.Constant
 import com.typesafe.scalalogging.LazyLogging
-import io.grpc.stub.StreamObserver
-import io.grpc.{ManagedChannel, ManagedChannelBuilder, Status, StatusRuntimeException}
+import io.grpc._
+import io.grpc.stub.{MetadataUtils, StreamObserver}
 
 import scala.util.Try
 
@@ -20,7 +21,16 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
 
   def initChatChannel(token:String, clientOutput: String => Unit): Unit = {
     logger.info("initializing chat services with token: " + token)
-    val chatChannel = ManagedChannelBuilder.forTarget("localhost:9092").usePlaintext(true).build
+
+    val metadata = new Metadata()
+    metadata.put(Constant.JWT_METADATA_KEY, token)
+
+    val chatChannel = ManagedChannelBuilder
+      .forTarget("localhost:9092")
+      .intercept(MetadataUtils.newAttachHeadersInterceptor(metadata))
+      .usePlaintext(true)
+      .build
+
     optChatChannel = Some(chatChannel)
 
     initChatServices()

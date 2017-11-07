@@ -31,10 +31,9 @@ object ChatServer extends LazyLogging {
     val chatRoomServiceDefinition = ChatRoomServiceGrpc.bindService(new ChatRoomServiceImpl(repository,authService), ExecutionContext.global)
     val chatStreamServiceDefinition = ChatStreamServiceGrpc.bindService(new ChatStreamServiceImpl(repository), ExecutionContext.global)
 
-    // TODO Add JWT Server Interceptor, then later, trace interceptor
     val server = ServerBuilder.forPort(9092)
-                    .addService(chatRoomServiceDefinition)
-                    .addService(chatStreamServiceDefinition)
+                    .addService(ServerInterceptors.intercept(chatRoomServiceDefinition, jwtServerInterceptor))
+                    .addService(ServerInterceptors.intercept(chatStreamServiceDefinition, jwtServerInterceptor))
                     .asInstanceOf[ServerBuilder[_]]
                     .build
                     .start
