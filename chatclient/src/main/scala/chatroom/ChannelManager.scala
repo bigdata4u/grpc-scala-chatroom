@@ -2,11 +2,14 @@ package chatroom
 
 import java.io.IOException
 
+import chatroom.AuthService.{AuthenticationRequest, AuthenticationServiceGrpc, AuthorizationRequest}
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationServiceBlockingStub
 import chatroom.ChatService._
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc.stub.StreamObserver
-import io.grpc.{ManagedChannel, ManagedChannelBuilder}
+import io.grpc.{ManagedChannel, ManagedChannelBuilder, Status, StatusRuntimeException}
+
+import scala.util.Try
 
 case class ChannelManager(authChannel: ManagedChannel, authService: AuthenticationServiceBlockingStub) extends LazyLogging {
 
@@ -59,15 +62,22 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
     */
   def authenticate(username: String, password: String, clientOutput: String => Unit): Option[String] = {
     logger.info("authenticating user: " + username)
-    //  Call authService.authenticate(...) and retreive the token
-
-    // TODO Call authService.authenticate(...) and retreive the token
-    // TODO Retrieve all the roles with authService.authorization(...) and print out all the roles
-    // TODO Return the token
-    // TODO Catch StatusRuntimeException, because there could be Unauthenticated errors.
-    // TODO If there are errors, return Option.empty[String]
-
-    ???
+    (for {
+      authenticationResponse <- Try(authService.authenticate(new AuthenticationRequest(username, password)))
+      token = authenticationResponse.token
+      authorizationResponse <- Try(authService.authorization(new AuthorizationRequest(token)))
+    } yield {
+      logger.info("user has these roles: " + authorizationResponse.roles)
+      token
+    }).fold({
+      case e: StatusRuntimeException =>
+        if (e.getStatus.getCode == Status.Code.UNAUTHENTICATED) {
+          logger.error("user not authenticated: " + username, e)
+        } else {
+          logger.error("caught a gRPC exception", e)
+        }
+        None
+    }, Some(_))
   }
 
   /**
@@ -159,10 +169,8 @@ object ChannelManager extends LazyLogging  {
     */
   def apply(): ChannelManager = {
     logger.info("initializing auth service")
-    // TODO Build a new ManagedChannel
-    val authChannel: ManagedChannel = ???
-    // TODO Get a new Blocking Stub
-    val authService: AuthenticationServiceBlockingStub = ???
+    val authChannel: ManagedChannel = ManagedChannelBuilder.forTarget("localhost:9091").usePlaintext(true).build
+    val authService: AuthenticationServiceBlockingStub = AuthenticationServiceGrpc.blockingStub(authChannel)
     ChannelManager(authChannel, authService)
   }
 }
