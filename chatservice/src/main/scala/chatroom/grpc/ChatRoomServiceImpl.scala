@@ -1,24 +1,34 @@
 package chatroom.grpc
 
-import chatroom.AuthService.AuthenticationServiceGrpc
+import chatroom.AuthService.{AuthenticationServiceGrpc, AuthorizationRequest}
 import chatroom.ChatService.{ChatRoomServiceGrpc, Empty, Room}
 import chatroom.repository.ChatRoomRepository
 import com.typesafe.scalalogging.LazyLogging
+import io.grpc.Status
 import io.grpc.stub.StreamObserver
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 class ChatRoomServiceImpl(val repository: ChatRoomRepository,
                           authService: AuthenticationServiceGrpc.AuthenticationServiceStub)
   extends ChatRoomServiceGrpc.ChatRoomService with LazyLogging {
 
   protected def processIfAdmin(room: Room, process: Room => Room) = {
-    // TODO Retrieve JWT from Constant.JWT_CTX_KEY
-    // TODO Retrieve the roles
-    // TODO If admin role, run process function on Room and return Success(room)
-    // TODO If not in the admin role, return Failure(Status.PERMISSION_DENIED.asRuntimeException)
-
-    ???
+    val jwt = Constant.JWT_CTX_KEY.get
+    val authorizationFuture = authService.authorization(AuthorizationRequest(jwt.getToken))
+    authorizationFuture.flatMap { authz =>
+      val tryAdmin = if (authz.roles.contains("admin")) {
+        process(room)
+        Success(room)
+      }
+      else {
+        logger.error(s"permission denied processing request")
+        Failure(Status.PERMISSION_DENIED.asRuntimeException)
+      }
+      Future.fromTry(tryAdmin)
+    }
   }
 
 

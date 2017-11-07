@@ -5,7 +5,7 @@ import java.io.IOException
 import chatroom.AuthService.AuthenticationServiceGrpc.AuthenticationServiceBlockingStub
 import chatroom.AuthService.{AuthenticationRequest, AuthenticationServiceGrpc, AuthorizationRequest}
 import chatroom.ChatService._
-import chatroom.grpc.Constant
+import chatroom.grpc.{Constant, JwtCallCredential}
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc._
 import io.grpc.stub.{MetadataUtils, StreamObserver}
@@ -33,17 +33,18 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
 
     optChatChannel = Some(chatChannel)
 
-    initChatServices()
-    initChatStream(clientOutput)
+    val jwtCallCredentials = new JwtCallCredential(token)
+    initChatServices(jwtCallCredentials)
+    initChatStream(jwtCallCredentials, clientOutput)
   }
 
   /**
     * Initialize Chat Services
     *
     */
-  def initChatServices(): Unit = {
+  def initChatServices(jwtCallCredentials: JwtCallCredential): Unit = {
     optChatChannel.foreach { chatChannel =>
-      val chatRoomService = ChatRoomServiceGrpc.blockingStub(chatChannel)
+      val chatRoomService = ChatRoomServiceGrpc.blockingStub(chatChannel).withCallCredentials(jwtCallCredentials)
       optChatRoomService = Some(chatRoomService)
     }
   }
@@ -51,7 +52,7 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
   /**
     * Initalize Chat Stream
     */
-  def initChatStream(clientOutput: String => Unit): Unit = {
+  def initChatStream(jwtCallCredentials: JwtCallCredential, clientOutput: String => Unit): Unit = {
 
     // TODO Implement new StreamObserver[ChatMessageFromServer]
     // TODO and assign the server responseObserver toServer variable
