@@ -46,44 +46,13 @@ class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStre
     new StreamObserver[ChatMessage] {
       //handle a new chat message and either join / leave a room or broadcast message
       override def onNext(chatMessage: ChatMessage): Unit = {
-        val optObservers = getRoomObservers(chatMessage.roomName)
-        logger.info(s"optObservers $optObservers")
-
-        optObservers.foreach { observers =>
-          chatMessage.`type` match {
-            //add a new response observer to the current set of observers
-            case MessageType.JOIN => {
-              logger.info("adding observer to room")
-              observers.add(responseObserver)
-            }
-            //remove an observer from the current set of observers
-            case MessageType.LEAVE =>
-              observers - (responseObserver)
-            //add a new response observer to the current set of observers
-            case MessageType.TEXT =>
-              if (observers.contains(responseObserver)) {
-                val now = Timestamp((new Date()).getTime)
-                val messageFromServer = ChatMessageFromServer(Some(now),chatMessage.`type`,chatMessage.roomName, username, chatMessage.message)
-                observers.foreach(nxtObserver => nxtObserver.onNext(messageFromServer))
-              }
-              else {
-                logger.info("returning error because user is not in room")
-                responseObserver.onError(Status.PERMISSION_DENIED.withDescription(s"You are not in the room ${chatMessage.roomName}").asRuntimeException)
-              }
-            case _ => logger.error("Unknown chat message type")
-          }
-        }
       }
 
       override def onError(t: Throwable): Unit = {
-        logger.error("gRPC error", t)
-        removeObserverFromAllRooms(responseObserver)
       }
 
       override def onCompleted(): Unit = {
-        removeObserverFromAllRooms(responseObserver)
       }
-
     }
   }
 }

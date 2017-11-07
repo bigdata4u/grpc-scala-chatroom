@@ -9,6 +9,7 @@ import chatroom.grpc.JwtCallCredential
 import io.grpc.{ManagedChannel, ManagedChannelBuilder, Status, StatusRuntimeException}
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
+import chatroom.grpc.JwtCallCredential
 
 class ChannelManager {
 
@@ -18,7 +19,6 @@ class ChannelManager {
   private var optAuthService: Option[AuthenticationServiceBlockingStub] = Option.empty[AuthenticationServiceBlockingStub]
   private var optAuthChannel: Option[ManagedChannel] = Option.empty[ManagedChannel]
 
-  private var optJwtCallCredentials: Option[JwtCallCredential] = Option.empty[JwtCallCredential]
   private var optChatChannel: Option[ManagedChannel] = Option.empty[ManagedChannel]
   private var optChatRoomService: Option[ChatRoomServiceGrpc.ChatRoomServiceBlockingStub] = Option.empty[ChatRoomServiceGrpc.ChatRoomServiceBlockingStub]
   private var optToServer: Option[StreamObserver[ChatMessage]] = Option.empty[StreamObserver[ChatMessage]]
@@ -34,9 +34,8 @@ class ChannelManager {
     // TODO Get a new Blocking Stub
   }
 
-  def initChatChannel(token: String, clientOutput: String => Unit): Unit = {
+  def initChatChannel(token:String, clientOutput: String => Unit): Unit = {
     logger.info("initializing chat services with token: " + token)
-    optJwtCallCredentials = Some(new JwtCallCredential(token))
     val chatChannel = ManagedChannelBuilder.forTarget("localhost:9092").usePlaintext(true).build
     optChatChannel = Some(chatChannel)
 
@@ -49,11 +48,8 @@ class ChannelManager {
     *
     */
   def initChatServices(): Unit = {
-    for {
-      chatChannel <- optChatChannel
-      callCredentials <- optJwtCallCredentials
-    } yield {
-      val chatRoomService = ChatRoomServiceGrpc.blockingStub(chatChannel).withCallCredentials(callCredentials)
+    optChatChannel.foreach { chatChannel =>
+      val chatRoomService = ChatRoomServiceGrpc.blockingStub(chatChannel)
       optChatRoomService = Some(chatRoomService)
     }
   }
