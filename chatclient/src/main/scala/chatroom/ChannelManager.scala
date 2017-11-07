@@ -8,26 +8,12 @@ import com.typesafe.scalalogging.LazyLogging
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 
-class ChannelManager extends LazyLogging {
+case class ChannelManager(authChannel: ManagedChannel, authService: AuthenticationServiceBlockingStub) extends LazyLogging {
 
   // Channels
-  private var optAuthService: Option[AuthenticationServiceBlockingStub] = Option.empty[AuthenticationServiceBlockingStub]
-  private var optAuthChannel: Option[ManagedChannel] = Option.empty[ManagedChannel]
-
   private var optChatChannel: Option[ManagedChannel] = Option.empty[ManagedChannel]
   private var optChatRoomService: Option[ChatRoomServiceGrpc.ChatRoomServiceBlockingStub] = Option.empty[ChatRoomServiceGrpc.ChatRoomServiceBlockingStub]
   private var optToServer: Option[StreamObserver[ChatMessage]] = Option.empty[StreamObserver[ChatMessage]]
-
-  /**
-    * Initialize a managed channel to connect to the auth service.
-    * Set the authChannel and authService
-    */
-  def initAuthService(): Unit = {
-    logger.info("initializing auth service")
-    // TODO Build a new ManagedChannel
-
-    // TODO Get a new Blocking Stub
-  }
 
   def initChatChannel(token:String, clientOutput: String => Unit): Unit = {
     logger.info("initializing chat services with token: " + token)
@@ -61,7 +47,7 @@ class ChannelManager extends LazyLogging {
   def shutdown(): Unit = {
     logger.info("Closing Chat Channels")
     optChatChannel.map(chatChannel => chatChannel.shutdown())
-    optAuthChannel.map(authChannel => authChannel.shutdown())
+    authChannel.shutdown()
   }
 
   /**
@@ -162,5 +148,21 @@ class ChannelManager extends LazyLogging {
   def sendMessage(room: String, message: String): Unit = {
     logger.info("sending chat message")
     // TODO call toServer.onNext(...)
+  }
+}
+
+object ChannelManager extends LazyLogging  {
+
+  /**
+    * Initialize a managed channel to connect to the auth service.
+    * Set the authChannel and authService
+    */
+  def apply(): ChannelManager = {
+    logger.info("initializing auth service")
+    // TODO Build a new ManagedChannel
+    val authChannel: ManagedChannel = ???
+    // TODO Get a new Blocking Stub
+    val authService: AuthenticationServiceBlockingStub = ???
+    ChannelManager(authChannel, authService)
   }
 }
