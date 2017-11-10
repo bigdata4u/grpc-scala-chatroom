@@ -28,7 +28,8 @@ lazy val commonSettings = Seq(
     "-Ywarn-dead-code",
     "-Ywarn-numeric-widen",
     "-Ywarn-value-discard"
-  )
+  ),
+  mappings in Universal += file("userdatabase.txt") -> "db/userdatabase.txt"
 )
 
 lazy val authservice = (project in file("authservice"))

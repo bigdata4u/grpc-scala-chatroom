@@ -19,10 +19,7 @@ package chatroom.repository;
 import chatroom.domain.User;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -33,7 +30,7 @@ public class UserRepository {
 
   private static Logger logger = Logger.getLogger(UserRepository.class.getName());
 
-  private static final String FILENAME = "./userdatabase.txt";
+  private static final String FILENAME = "userdatabase.txt";
 
   private ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>();
 
@@ -96,7 +93,10 @@ public class UserRepository {
   }
 
   private File getOrCreateFile() throws Exception {
-    File file = new File(FILENAME);
+    String databasePath = Optional.ofNullable(System.getenv("DB_PATH")).orElse(".");
+    String filePath = databasePath + "/" + FILENAME;
+    logger.info("loading users database file from path: " + filePath);
+    File file = new File(filePath);
     if (!file.exists()) {
       boolean createdFile = file.createNewFile();
       if (!createdFile)
