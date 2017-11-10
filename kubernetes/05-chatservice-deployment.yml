@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: chat-service
-        image: gcr.io/istio-workshop/chatservice:1.0
+        image: gcr.io/grpc-workshop/chatservice:1.0
         ports:
         - name: grpc
           containerPort: 9092

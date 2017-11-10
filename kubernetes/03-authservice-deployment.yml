@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: gcr.io/istio-workshop/authservice:1.0
+        image: gcr.io/grpc-workshop/authservice:1.0
         ports:
         - name: grpc
           containerPort: 9091
