@@ -16,6 +16,7 @@
 
 package chatroom.repository;
 
+import chatroom.EnvVars;
 import chatroom.domain.User;
 
 import java.io.*;
@@ -93,8 +94,7 @@ public class UserRepository {
   }
 
   private File getOrCreateFile() throws Exception {
-    String databasePath = Optional.ofNullable(System.getenv("DB_PATH")).orElse(".");
-    String filePath = databasePath + "/" + FILENAME;
+    String filePath = EnvVars.DATABASE_PATH + "/" + FILENAME;
     logger.info("loading users database file from path: " + filePath);
     File file = new File(filePath);
     if (!file.exists()) {

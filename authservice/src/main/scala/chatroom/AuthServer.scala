@@ -20,10 +20,10 @@ object AuthServer extends LazyLogging {
     val algorithm = Algorithm.HMAC256("secret")
     val authServiceImpl = new AuthServiceImpl(repository, "auth-issuer", algorithm)
 
-    val reporter = AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v1/spans"))
+    val reporter = AsyncReporter.create(URLConnectionSender.create(EnvVars.ZIPKIN_URL))
     val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("auth-service").reporter(reporter).build)
 
-    val server = ServerBuilder.forPort(9091)
+    val server = ServerBuilder.forPort(EnvVars.AUTH_SERVICE_PORT)
       .addService(ServerInterceptors.intercept(
         AuthenticationServiceGrpc.bindService(authServiceImpl, ExecutionContext.global),
         tracing.newServerInterceptor())
@@ -31,7 +31,7 @@ object AuthServer extends LazyLogging {
       .build
 
     server.start()
-    logger.info("Server started on port 9091")
+    logger.info("Server started on port " + EnvVars.AUTH_SERVICE_PORT)
     server.awaitTermination()
 
     Runtime.getRuntime.addShutdownHook(new Thread() {

@@ -29,11 +29,11 @@ case class ChannelManager(authChannel: ManagedChannel, authService: Authenticati
     val metadata = new Metadata()
     metadata.put(Constant.JWT_METADATA_KEY, token)
 
-    val reporter = AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v1/spans"))
+    val reporter = AsyncReporter.create(URLConnectionSender.create(EnvVars.ZIPKIN_URL))
     val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("chat-channel").reporter(reporter).build)
 
     val chatChannel = ManagedChannelBuilder
-      .forTarget("localhost:9092")
+      .forTarget(EnvVars.CHAT_SERVICE_URL)
       .intercept(MetadataUtils.newAttachHeadersInterceptor(metadata))
       .intercept(tracing.newClientInterceptor())
       .asInstanceOf[ManagedChannelBuilder[_]]
@@ -220,10 +220,10 @@ object ChannelManager extends LazyLogging  {
     */
   def apply(): ChannelManager = {
     logger.info("initializing auth service")
-    val reporter = AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v1/spans"))
+    val reporter = AsyncReporter.create(URLConnectionSender.create(EnvVars.ZIPKIN_URL))
     val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("auth-channel").reporter(reporter).build)
     val authChannel: ManagedChannel = ManagedChannelBuilder
-      .forTarget("localhost:9091")
+      .forTarget(EnvVars.AUTH_SERVICE_URL)
       .intercept(tracing.newClientInterceptor())
       .usePlaintext(true)
       .asInstanceOf[ManagedChannelBuilder[_]]

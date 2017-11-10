@@ -20,10 +20,10 @@ object ChatServer extends LazyLogging {
     val repository = new ChatRoomRepository
     val jwtServerInterceptor = new JwtServerInterceptor("auth-issuer", Algorithm.HMAC256("secret"))
 
-    val reporter = AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v1/spans"))
+    val reporter = AsyncReporter.create(URLConnectionSender.create(EnvVars.ZIPKIN_URL))
     val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("chat-service").reporter(reporter).build)
 
-    val authChannel = ManagedChannelBuilder.forTarget("localhost:9091")
+    val authChannel = ManagedChannelBuilder.forTarget(EnvVars.AUTH_SERVICE_URL)
       .intercept(new JwtClientInterceptor)
       .intercept(tracing.newClientInterceptor())
       .asInstanceOf[ManagedChannelBuilder[_]]
@@ -38,7 +38,7 @@ object ChatServer extends LazyLogging {
     val chatRoomServiceDefinition = ChatRoomServiceGrpc.bindService(new ChatRoomServiceImpl(repository,authService), ExecutionContext.global)
     val chatStreamServiceDefinition = ChatStreamServiceGrpc.bindService(new ChatStreamServiceImpl(repository), ExecutionContext.global)
 
-    val server = ServerBuilder.forPort(9092)
+    val server = ServerBuilder.forPort(EnvVars.CHAT_SERVICE_PORT)
                     .addService(ServerInterceptors.intercept(chatRoomServiceDefinition, jwtServerInterceptor))
                     .addService(ServerInterceptors.intercept(chatStreamServiceDefinition, jwtServerInterceptor))
                     .asInstanceOf[ServerBuilder[_]]
@@ -51,7 +51,7 @@ object ChatServer extends LazyLogging {
         authChannel.shutdownNow
       }
     })
-    logger.info("Server Started on port 9092")
+    logger.info("Server Started on port " + EnvVars.CHAT_SERVICE_PORT)
     server.awaitTermination()
   }
 }
