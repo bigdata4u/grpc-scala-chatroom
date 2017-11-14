@@ -20,7 +20,8 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: gcr.io/grpc-workshop/authservice:1.0
+        image: retroryan/authservice:1.0
+        imagePullPolicy: Always
         ports:
         - name: grpc
           containerPort: 9091

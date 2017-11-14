@@ -20,7 +20,8 @@ spec:
     spec:
       containers:
       - name: chat-service
-        image: gcr.io/grpc-workshop/chatservice:1.0
+        image: retroryan/chatservice:1.0
+        imagePullPolicy: Always
         ports:
         - name: grpc
           containerPort: 9092

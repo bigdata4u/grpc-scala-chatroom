@@ -8,6 +8,7 @@ spec:
   type: LoadBalancer
   ports:
     - port: 9091
+      name: grpc
       targetPort: 9091
   selector:
     app: auth-service
