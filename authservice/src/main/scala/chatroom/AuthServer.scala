@@ -1,41 +1,44 @@
 package chatroom
 
-import java.util.concurrent.Executors
-
+import brave.Tracing
+import brave.grpc.GrpcTracing
 import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.grpc.AuthServiceImpl
 import chatroom.repository.UserRepository
 import com.auth0.jwt.algorithms.Algorithm
-import io.grpc.{Context, ServerBuilder}
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.LazyLogging
+import io.grpc.{ServerBuilder, ServerInterceptors}
+import zipkin.reporter.AsyncReporter
+import zipkin.reporter.urlconnection.URLConnectionSender
 
 import scala.concurrent.ExecutionContext
 
-object AuthServer {
-  private val logger = LoggerFactory.getLogger("AuthServer")
+object AuthServer extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
     val repository = new UserRepository
-    // TODO Use ServerBuilder to create a new Server instance. Start it, and await termination.
-
     val algorithm = Algorithm.HMAC256("secret")
     val authServiceImpl = new AuthServiceImpl(repository, "auth-issuer", algorithm)
-    val server = ServerBuilder.forPort(9091)
-      .addService(AuthenticationServiceGrpc.bindService(authServiceImpl, ExecutionContext.global))
-      .build.start
+
+    val reporter = AsyncReporter.create(URLConnectionSender.create(EnvVars.ZIPKIN_URL))
+    val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("auth-service").reporter(reporter).build)
+
+    val server = ServerBuilder.forPort(EnvVars.AUTH_SERVICE_PORT)
+      .addService(ServerInterceptors.intercept(
+        AuthenticationServiceGrpc.bindService(authServiceImpl, ExecutionContext.global),
+        tracing.newServerInterceptor())
+      )
+      .build
+
+    server.start()
+    logger.info("Server started on port " + EnvVars.AUTH_SERVICE_PORT)
+    server.awaitTermination()
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         server.shutdownNow
       }
     })
-
-    Context.current.addListener((context: Context) => {
-      System.out.println("Call was cancelled!")
-    }, Executors.newCachedThreadPool)
-
-    logger.info("Server started on port 9091")
-    server.awaitTermination()
   }
 
 }

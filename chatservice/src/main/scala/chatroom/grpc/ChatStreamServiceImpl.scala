@@ -2,19 +2,17 @@ package chatroom.grpc
 
 import java.util.Date
 
-import org.slf4j.LoggerFactory
 import chatroom.ChatService.{ChatMessage, ChatMessageFromServer, ChatStreamServiceGrpc, MessageType}
 import chatroom.repository.ChatRoomRepository
 import com.google.protobuf.timestamp.Timestamp
-import io.grpc.{Status, StatusRuntimeException}
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc.stub.StreamObserver
+import io.grpc.{Status, StatusRuntimeException}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
-class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStreamServiceGrpc.ChatStreamService {
-
-  private val logger = LoggerFactory.getLogger(classOf[ChatStreamServiceImpl].getName)
+class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStreamServiceGrpc.ChatStreamService with LazyLogging {
 
   val roomObservers = TrieMap[String, mutable.Set[StreamObserver[ChatMessageFromServer]]]()
 
@@ -48,7 +46,6 @@ class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStre
       override def onNext(chatMessage: ChatMessage): Unit = {
         val optObservers = getRoomObservers(chatMessage.roomName)
         logger.info(s"optObservers $optObservers")
-
         optObservers.foreach { observers =>
           chatMessage.`type` match {
             //add a new response observer to the current set of observers
@@ -83,7 +80,6 @@ class ChatStreamServiceImpl(val repository: ChatRoomRepository) extends ChatStre
       override def onCompleted(): Unit = {
         removeObserverFromAllRooms(responseObserver)
       }
-
     }
   }
 }

@@ -1,27 +1,32 @@
 package chatroom
 
+import brave.Tracing
+import brave.grpc.GrpcTracing
 import chatroom.AuthService.AuthenticationServiceGrpc
 import chatroom.ChatService.{ChatRoomServiceGrpc, ChatStreamServiceGrpc}
 import chatroom.grpc.{ChatRoomServiceImpl, ChatStreamServiceImpl, JwtClientInterceptor, JwtServerInterceptor}
 import chatroom.repository.ChatRoomRepository
 import com.auth0.jwt.algorithms.Algorithm
+import com.typesafe.scalalogging.LazyLogging
 import io.grpc._
-import org.slf4j.LoggerFactory
+import zipkin.reporter.AsyncReporter
+import zipkin.reporter.urlconnection.URLConnectionSender
 
 import scala.concurrent.ExecutionContext
 
-object ChatServer {
-
-  private val logger = LoggerFactory.getLogger("ChatServer")
+object ChatServer extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
     val repository = new ChatRoomRepository
     val jwtServerInterceptor = new JwtServerInterceptor("auth-issuer", Algorithm.HMAC256("secret"))
 
-    // TODO Initial tracer
-    // TODO Add trace interceptor
-    val authChannel = ManagedChannelBuilder.forTarget("localhost:9091")
+    val reporter = AsyncReporter.create(URLConnectionSender.create(EnvVars.ZIPKIN_URL))
+    val tracing = GrpcTracing.create(Tracing.newBuilder.localServiceName("chat-service").reporter(reporter).build)
+
+    val authChannel = ManagedChannelBuilder.forTarget(EnvVars.AUTH_SERVICE_URL)
       .intercept(new JwtClientInterceptor)
+      .intercept(tracing.newClientInterceptor())
+      .asInstanceOf[ManagedChannelBuilder[_]]
       .usePlaintext(true)
       .asInstanceOf[ManagedChannelBuilder[_]]
       .build()
@@ -30,16 +35,15 @@ object ChatServer {
     val chatRoomService = new ChatRoomServiceImpl(repository, authService)
     val chatStreamService = new ChatStreamServiceImpl(repository)
 
-    // TODO Add JWT Server Interceptor, then later, trace interceptor
+    val chatRoomServiceDefinition = ChatRoomServiceGrpc.bindService(new ChatRoomServiceImpl(repository,authService), ExecutionContext.global)
+    val chatStreamServiceDefinition = ChatStreamServiceGrpc.bindService(new ChatStreamServiceImpl(repository), ExecutionContext.global)
 
-    val serviceDefinition = ChatRoomServiceGrpc.bindService(new ChatRoomServiceImpl(repository,authService), ExecutionContext.global)
-    val streamServiceDefinition = ChatStreamServiceGrpc.bindService(new ChatStreamServiceImpl(repository), ExecutionContext.global)
-
-    val server = ServerBuilder.forPort(9092)
-                    .addService(ServerInterceptors.intercept(serviceDefinition, jwtServerInterceptor))
-                    .addService(ServerInterceptors.intercept(streamServiceDefinition, jwtServerInterceptor))
+    val server = ServerBuilder.forPort(EnvVars.CHAT_SERVICE_PORT)
+                    .addService(ServerInterceptors.intercept(chatRoomServiceDefinition, jwtServerInterceptor))
+                    .addService(ServerInterceptors.intercept(chatStreamServiceDefinition, jwtServerInterceptor))
                     .asInstanceOf[ServerBuilder[_]]
-                    .build.start
+                    .build
+                    .start
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
@@ -47,7 +51,7 @@ object ChatServer {
         authChannel.shutdownNow
       }
     })
-    logger.info("Server Started on port 9092")
+    logger.info("Server Started on port " + EnvVars.CHAT_SERVICE_PORT)
     server.awaitTermination()
   }
 }

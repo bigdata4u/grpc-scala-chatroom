@@ -2,22 +2,19 @@ package chatroom
 
 import java.io.IOException
 
+import com.typesafe.scalalogging.LazyLogging
 import jline.console.ConsoleReader
-import org.slf4j.LoggerFactory
 
-object ChatClient {
-
-  private val logger = LoggerFactory.getLogger("ChatClient")
+object ChatClient extends LazyLogging {
 
   private val console = new ConsoleReader
 
-  private val channelManager = new ChannelManager
+  private val channelManager = ChannelManager()
 
   private var state = CurrentState()
 
   @throws[Exception]
   def main(args: Array[String]): Unit = {
-    channelManager.initAuthService()
     prompt()
   }
 
@@ -70,7 +67,7 @@ object ChatClient {
       else if (command.equalsIgnoreCase("/login")) {
         logger.info("processing login user")
         val password = console.readLine("password> ", '*')
-        val optToken = channelManager.authenticate(username, password)
+        val optToken = channelManager.authenticate(username, password, outputToConsole)
         optToken.foreach {
           token =>
             this.state = CurrentState(AUTHENTICATED, username, token, null)

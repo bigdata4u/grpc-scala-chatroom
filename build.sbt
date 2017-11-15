@@ -1,7 +1,7 @@
 import com.trueaccord.scalapb.compiler.Version.{grpcJavaVersion, scalapbVersion, protobufVersion}
 
 
-lazy val root = (project in file(".")).aggregate(authservice, chatclient, chatservice)
+lazy val root = (project in file(".")).aggregate(authservice, chatclient, chatservice, common)
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.3",
@@ -12,7 +12,10 @@ lazy val commonSettings = Seq(
     "io.grpc" % "grpc-netty" % grpcJavaVersion,
     "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion  % "protobuf",
     "org.slf4j" % "slf4j-api" % "1.7.5",
-    "org.slf4j" % "slf4j-simple" % "1.7.5"
+    "org.slf4j" % "slf4j-simple" % "1.7.5",
+    "io.zipkin.brave" % "brave-instrumentation-grpc" % "4.4.0",
+    "io.zipkin.reporter" % "zipkin-sender-urlconnection" % "0.10.0",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
   ),
   scalacOptions ++= Seq(
     "-feature",
@@ -28,15 +31,23 @@ lazy val commonSettings = Seq(
   )
 )
 
-lazy val authservice = (project in file("authservice"))
-  .enablePlugins(JavaAppPackaging)
+lazy val common = (project in file("common"))
   .settings(
-    name         := "authservice",
+    name         := "common",
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value
     ),
     commonSettings,
     libraryDependencies += "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
+  )
+
+lazy val authservice = (project in file("authservice"))
+  .enablePlugins(JavaAppPackaging)
+  .dependsOn(common)
+  .settings(
+    name         := "authservice",
+    commonSettings,
+    mappings in Universal += file("userdatabase.txt") -> "db/userdatabase.txt"
   )
 
 
@@ -45,11 +56,7 @@ lazy val chatservice = (project in file("chatservice"))
   .enablePlugins(JavaAppPackaging)
   .settings(
     name         := "chatservice",
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value
-    ),
-    commonSettings,
-    libraryDependencies += "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
+    commonSettings
   )
 
 lazy val chatclient = (project in file("chatclient"))
@@ -62,4 +69,3 @@ lazy val chatclient = (project in file("chatclient"))
       "jline" % "jline" % "2.14.4"
     )
   )
-
